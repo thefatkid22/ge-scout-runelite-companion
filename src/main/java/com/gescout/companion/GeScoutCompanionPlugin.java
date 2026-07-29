@@ -19,6 +19,7 @@ import net.runelite.api.GrandExchangeOfferState;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GrandExchangeOfferChanged;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.ItemManager;
@@ -47,6 +48,9 @@ public class GeScoutCompanionPlugin extends Plugin
     private ScheduledExecutorService executor;
 
     @Inject
+    private ClientThread clientThread;
+
+    @Inject
     private GeScoutSyncClient syncClient;
 
     private final Map<Integer, String> slotFingerprints = new HashMap<>();
@@ -54,6 +58,7 @@ public class GeScoutCompanionPlugin extends Plugin
     private NavigationButton navigation;
     private ScheduledFuture<?> syncTask;
     private ScheduledFuture<?> planTask;
+    private ScheduledFuture<?> snapshotTask;
     private String sessionId = UUID.randomUUID().toString();
     private long sequence;
     private boolean snapshotQueued;
@@ -86,6 +91,11 @@ public class GeScoutCompanionPlugin extends Plugin
             1,
             30,
             TimeUnit.SECONDS);
+        snapshotTask = executor.scheduleWithFixedDelay(
+            () -> clientThread.invokeLater(this::queueSafetySnapshot),
+            5,
+            15,
+            TimeUnit.SECONDS);
     }
 
     @Override
@@ -98,6 +108,10 @@ public class GeScoutCompanionPlugin extends Plugin
         if (planTask != null)
         {
             planTask.cancel(false);
+        }
+        if (snapshotTask != null)
+        {
+            snapshotTask.cancel(false);
         }
         if (navigation != null)
         {
@@ -163,6 +177,27 @@ public class GeScoutCompanionPlugin extends Plugin
         }
         slotFingerprints.put(slot, fingerprint);
         syncClient.enqueue(observation);
+        panel.setObservation(
+            slot,
+            observation.state,
+            observation.itemName,
+            observation.filledQuantity,
+            observation.totalQuantity,
+            observation.offerPrice,
+            eventType);
+    }
+
+    private void queueSafetySnapshot()
+    {
+        if (client.getGameState() != GameState.LOGGED_IN || !snapshotQueued)
+        {
+            return;
+        }
+        GrandExchangeOffer[] offers = client.getGrandExchangeOffers();
+        for (int slot = 0; slot < offers.length; slot++)
+        {
+            enqueue(offers[slot], slot, "snapshot", false);
+        }
     }
 
     private GeObservation observation(

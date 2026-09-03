@@ -24,6 +24,8 @@ final class GeScoutSyncClient
 {
     private static final MediaType JSON =
         MediaType.parse("application/json; charset=utf-8");
+    private static final String USER_AGENT =
+        "GE-Scout-RuneLite-Companion/0.2.0";
     private static final int MAX_QUEUE = 256;
     private static final int MAX_BATCH = 64;
     private static final Type QUEUE_TYPE =
@@ -192,10 +194,9 @@ final class GeScoutSyncClient
         try
         {
             URI base = ServerAddressPolicy.requireSafeBaseUrl(config.serverUrl());
-            Request request = new Request.Builder()
-                .url(base.resolve("/api/sync/companion").toString())
+            Request request = requestBuilder(
+                base.resolve("/api/sync/companion"))
                 .header("Authorization", "Bearer " + config.companionToken().trim())
-                .header("User-Agent", "GE-Scout-RuneLite-Companion/0.1")
                 .get()
                 .build();
             try (Response response = http.newCall(request).execute())
@@ -258,15 +259,20 @@ final class GeScoutSyncClient
 
     private Request request(URI url, String json, String token)
     {
-        Request.Builder builder = new Request.Builder()
-            .url(url.toString())
-            .header("User-Agent", "GE-Scout-RuneLite-Companion/0.1")
+        Request.Builder builder = requestBuilder(url)
             .post(RequestBody.create(JSON, json));
         if (token != null)
         {
             builder.header("Authorization", "Bearer " + token);
         }
         return builder.build();
+    }
+
+    static Request.Builder requestBuilder(URI url)
+    {
+        return new Request.Builder()
+            .url(url.toString())
+            .header("User-Agent", USER_AGENT);
     }
 
     private String errorMessage(String payload)

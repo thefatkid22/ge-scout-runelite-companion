@@ -2,6 +2,7 @@ package com.gescout.companion;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
 public class GeObservationTest
@@ -15,6 +16,16 @@ public class GeObservationTest
 
         assertNotEquals(original.fingerprint(), repriced.fingerprint());
         assertNotEquals(original.fingerprint(), partialFill.fingerprint());
+    }
+
+    @Test
+    public void offerPricesStayWithinTheObservationSchema()
+    {
+        assertEquals(0, GeScoutCompanionPlugin.safeOfferPrice(-1L));
+        assertEquals(1_000_000, GeScoutCompanionPlugin.safeOfferPrice(1_000_000L));
+        assertEquals(
+            Integer.MAX_VALUE,
+            GeScoutCompanionPlugin.safeOfferPrice(Long.MAX_VALUE));
     }
 
     private static GeObservation observation(

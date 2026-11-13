@@ -225,10 +225,17 @@ public class GeScoutCompanionPlugin extends Plugin
             itemName,
             state.name(),
             direction(state),
-            Math.max(0, offer.getPrice()),
+            safeOfferPrice(offer.getPrice()),
             Math.max(0, offer.getTotalQuantity()),
             Math.max(0, offer.getQuantitySold()),
             Math.max(0L, (long) offer.getSpent()));
+    }
+
+    static int safeOfferPrice(long price)
+    {
+        return (int) Math.max(
+            0L,
+            Math.min((long) Integer.MAX_VALUE, price));
     }
 
     static String direction(GrandExchangeOfferState state)
